@@ -57,6 +57,7 @@ static int direxists(const char *fname)
 
 #elif defined(OS_WINDOWS)
 #include "windows.h"
+#include "io.h"
 
 /* Some SDKs don't define this */
 #ifndef INVALID_FILE_ATTRIBUTES
@@ -69,7 +70,7 @@ typedef HANDLE filedes_t;
 static int direxists(const char *fname)
 {
     DWORD result;
-    result = GetFileAttributes(fname);
+    result = GetFileAttributesA(fname);
     if (result == INVALID_FILE_ATTRIBUTES) return 0;
     return !!(result & FILE_ATTRIBUTE_DIRECTORY);
 }
@@ -282,7 +283,7 @@ static void copy_w32error(char errmsg_out[], size_t errmsg_len, DWORD error)
 static void push_w32error(lua_State *L, DWORD error)
 {
     LPTSTR buf;
-    if (FormatMessage(
+    if (FormatMessageA(
         FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
         NULL, error, 0, (void *) &buf, 1, NULL) == 0)
     {
@@ -541,7 +542,7 @@ child_failure:
     int i, fd;
     struct fdinfo *fdi;
     SECURITY_ATTRIBUTES secattr;
-    STARTUPINFO si;
+    STARTUPINFOA si;
     PROCESS_INFORMATION pi;
     char *cmdline;
 
@@ -582,7 +583,7 @@ dup_hfile:
                 break;
             case FDMODE_FILENAME:
                 if (i == STDIN_FILENO){
-                    hfiles[i] = CreateFile(
+                    hfiles[i] = CreateFileA(
                         fdi->info.filename,
                         GENERIC_READ,
                         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -591,7 +592,7 @@ dup_hfile:
                         FILE_ATTRIBUTE_NORMAL,
                         NULL);
                 } else {
-                    hfiles[i] = CreateFile(
+                    hfiles[i] = CreateFileA(
                         fdi->info.filename,
                         GENERIC_WRITE,
                         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -689,7 +690,7 @@ failure:
     si.hStdOutput = hfiles[1];
     si.hStdError = hfiles[2];
 
-    if (CreateProcess(
+    if (CreateProcessA(
         executable, /* lpApplicationName */
         cmdline,    /* lpCommandLine */
         NULL,       /* lpProcessAttributes */
@@ -698,7 +699,7 @@ failure:
         0,          /* dwCreationFlags */
         NULL,       /* lpEnvironment */
         cwd,        /* lpCurrentDirectory */
-        &si,        /* lpStartupInfo */
+        &si,        /* lpStartupInfoA */
         &pi)        /* lpProcessInformation */
     == 0){
         copy_w32error(errmsg_out, errmsg_len, GetLastError());
