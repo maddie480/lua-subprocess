@@ -42,7 +42,9 @@
 #include "unistd.h"
 #include "sys/wait.h"
 #include "sys/stat.h"
+#include "sys/types.h"
 #include "stdio.h"
+#include "signal.h"
 typedef int filedes_t;
 
 /* return 1 if the named directory exists and is a directory */
