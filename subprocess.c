@@ -61,6 +61,20 @@ static int direxists(const char *fname)
 #include "windows.h"
 #include "io.h"
 
+/* Converts a multibyte UTF-8 character string into a wide character string. Required for internationalization. */
+static LPWSTR utf8towchar(const char *strC)
+{
+    if (strC == NULL)
+        return NULL;
+    int length = strlen(strC) + 1;
+    int size = MultiByteToWideChar(CP_UTF8, 0, strC, length, NULL, 0);
+    assert(size != 0);
+    LPWSTR strW = malloc(size * sizeof(WCHAR));
+    length = MultiByteToWideChar(CP_UTF8, 0, strC, length, strW, size);
+    assert(size == length);
+    return strW;
+}
+
 /* Some SDKs don't define this */
 #ifndef INVALID_FILE_ATTRIBUTES
 #define INVALID_FILE_ATTRIBUTES ((DWORD) -1)
@@ -71,8 +85,9 @@ typedef HANDLE filedes_t;
 /* return 1 if the named directory exists and is a directory */
 static int direxists(const char *fname)
 {
-    DWORD result;
-    result = GetFileAttributesA(fname);
+    LPWSTR fnameW = utf8towchar(fname);
+    DWORD result = GetFileAttributesW(fnameW);
+    free(fnameW);
     if (result == INVALID_FILE_ATTRIBUTES) return 0;
     return !!(result & FILE_ATTRIBUTE_DIRECTORY);
 }
@@ -544,7 +559,7 @@ child_failure:
     int i, fd;
     struct fdinfo *fdi;
     SECURITY_ATTRIBUTES secattr;
-    STARTUPINFOA si;
+    STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     char *cmdline;
 
@@ -692,26 +707,37 @@ failure:
     si.hStdOutput = hfiles[1];
     si.hStdError = hfiles[2];
 
-    if (CreateProcessA(
-        executable, /* lpApplicationName */
-        cmdline,    /* lpCommandLine */
-        NULL,       /* lpProcessAttributes */
-        NULL,       /* lpThreadAttributes */
-        TRUE,       /* bInheritHandles */
-        0,          /* dwCreationFlags */
-        NULL,       /* lpEnvironment */
-        cwd,        /* lpCurrentDirectory */
-        &si,        /* lpStartupInfoA */
-        &pi)        /* lpProcessInformation */
+
+    LPWSTR executableW = utf8towchar(executable);
+    LPWSTR cmdlineW = utf8towchar(cmdline);
+    LPWSTR cwdW = utf8towchar(cwd);
+
+    if (CreateProcessW(
+        executableW, /* lpApplicationName */
+        cmdlineW,    /* lpCommandLine */
+        NULL,        /* lpProcessAttributes */
+        NULL,        /* lpThreadAttributes */
+        TRUE,        /* bInheritHandles */
+        0,           /* dwCreationFlags */
+        NULL,        /* lpEnvironment */
+        cwdW,        /* lpCurrentDirectory */
+        &si,         /* lpStartupInfoW */
+        &pi)         /* lpProcessInformation */
     == 0){
         copy_w32error(errmsg_out, errmsg_len, GetLastError());
         free(cmdline);
+        free(executableW);
+        free(cmdlineW);
+        free(cwdW);
         closefds(hfiles, 3);
         closefiles(pipe_ends_out, 3);
         return -1;
     }
     CloseHandle(pi.hThread); /* Don't want this handle */
     free(cmdline);
+    free(executableW);
+    free(cmdlineW);
+    free(cwdW);
     closefds(hfiles, 3); /* XXX: is this correct? */
     proc->done = 0;
     proc->pid = pi.dwProcessId;
