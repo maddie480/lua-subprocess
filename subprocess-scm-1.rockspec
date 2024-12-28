@@ -1,7 +1,7 @@
 package = "subprocess"
 version = "scm-1"
 source = {
-   url = "git://github.com/0x0ade/lua-subprocess.git"
+   url = "git://github.com/maddie480/lua-subprocess.git"
 }
 description = {
    summary = "A Lua module written in C that allows you to create child processes and communicate with them.",

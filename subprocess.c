@@ -288,8 +288,8 @@ static void freestrings(char **strs, int n)
 /* Copy a Windows error into a buffer */
 static void copy_w32error(char errmsg_out[], size_t errmsg_len, DWORD error)
 {
-    if (FormatMessage(
-        FORMAT_MESSAGE_FROM_SYSTEM, NULL, error, 0,
+    if (FormatMessageA(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, NULL, error, 0,
         (void *) errmsg_out, errmsg_len, NULL) == 0)
     {
         strncpy(errmsg_out, "failed to get error message", errmsg_len + 1);
